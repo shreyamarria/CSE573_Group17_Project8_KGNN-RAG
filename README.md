@@ -6,7 +6,7 @@ Created by: Shreya Marria, Matthew Mulderink, Mannan Anand, Maharshi Saragadam,S
 CSE 573: Semantic Web Mining (2025 Fall C)
 Instructor: Hasan Davulcu
 
-Basically, our project makes a KGNN-RAG for the MovieLens 1M ratings dataset.
+Our project makes a KGNN-RAG for the MovieLens 1M ratings dataset with user 
 The MovieLens dataset is a common dataset used in benchmarks, so it is a solid choice to compare against.
 
 # Instructions
