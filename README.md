@@ -1,1 +1,7 @@
 # CSE573_Group17_Project8_KGNN-RAG
+
+# Code Directory 
+
+# Data Directory
+
+# Evaluation Directory
