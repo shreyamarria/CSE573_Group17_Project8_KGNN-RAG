@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieLens Recommender</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        h1 {
+            font-size: 2em;
+            font-weight: 600;
+        }
+
+        .api-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .api-controls input {
+            padding: 8px 12px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.9em;
+            width: 180px;
+        }
+
+        .api-controls input::placeholder {
+            color: #666;
+        }
+
+        .api-controls button {
+            padding: 8px 16px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .api-controls button:hover {
+            background: #ddd;
+        }
+
+        .status {
+            font-size: 0.85em;
+            padding: 6px 12px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status.success {
+            background: #1a3d1a;
+            color: #4ade80;
+            display: inline-block;
+        }
+
+        .status.error {
+            background: #3d1a1a;
+            color: #f87171;
+            display: inline-block;
+        }
+
+        .query-section {
+            margin-bottom: 30px;
+        }
+
+        .query-section textarea {
+            width: 100%;
+            padding: 16px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 1em;
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .query-section textarea::placeholder {
+            color: #666;
+        }
+
+        .examples {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .example-btn {
+            flex: 1;
+            padding: 10px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85em;
+        }
+
+        .example-btn:hover {
+            background: #222;
+            border-color: #555;
+        }
+
+        .submit-btn {
+            padding: 10px 24px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.95em;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            background: #ddd;
+        }
+
+        .submit-btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            margin-top: 40px;
+        }
+
+        .results-section h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .message {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .cards-container {
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .cards {
+            display: flex;
+            gap: 15px;
+            min-width: min-content;
+        }
+
+        .card {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 16px;
+            min-width: 250px;
+            max-width: 250px;
+            flex-shrink: 0;
+        }
+
+        .card h3 {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+
+        .card .meta {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            border: 1px solid #333;
+            background: #000;
+        }
+
+        .stars {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .graph-section {
+            margin-top: 40px;
+        }
+
+        .graph-section h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        #graph {
+            width: 100%;
+            height: 800px;
+            background: #111;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+
+        .graph-legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MovieLens Recommender</h1>
+        <div class="api-controls">
+            <input type="text" id="apiUrl" placeholder="url">
+            <input type="password" id="apiPassword" placeholder="password">
+            <button onclick="testConnection()">Connect</button>
+            <div id="connectionStatus" class="status"></div>
+        </div>
+    </div>
+
+    <div class="query-section">
+        <textarea 
+            id="queryInput" 
+            placeholder="Enter your query (e.g., 'Action films for teachers from the 1990s')"
+        ></textarea>
+
+        <div class="examples">
+            <button class="example-btn" onclick="setQuery('Action films from the 1990s')">
+                Action films from the 1990s
+            </button>
+            <button class="example-btn" onclick="setQuery('Movies similar to The Matrix')">
+                Movies similar to The Matrix
+            </button>
+            <button class="example-btn" onclick="setQuery('Action films for teachers that are 35 years old from the 1990s')">
+                Action films for teachers aged 35 from 1990s
+            </button>
+            <button class="example-btn" onclick="setQuery('Comedy movies from 2000s')">
+                Comedy movies from 2000s
+            </button>
+        </div>
+
+        <button class="submit-btn" onclick="getRecommendations()" id="submitBtn">
+            Get Recommendations
+        </button>
+    </div>
+
+    <div class="results-section" id="resultsSection" style="display: none;">
+        <h2>Recommendations</h2>
+        <div id="resultsContainer"></div>
+    </div>
+
+    <div class="graph-section" id="graphSection" style="display: none;">
+        <h2>Relationship Graph</h2>
+        <div class="graph-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff;"></div>
+                <span>Movies</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #888;"></div>
+                <span>Genres</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #555;"></div>
+                <span>Decades</span>
+            </div>
+        </div>
+        <svg id="graph"></svg>
+    </div>
+
+    <script>
+        let currentMovies = [];
+
+        function setQuery(query) {
+            document.getElementById('queryInput').value = query;
+        }
+
+        async function testConnection() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const password = document.getElementById('apiPassword').value.trim();
+            const statusDiv = document.getElementById('connectionStatus');
+
+            if (!apiUrl) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Enter URL';
+                return;
+            }
+
+            statusDiv.className = 'status';
+            statusDiv.textContent = 'Testing...';
+            statusDiv.style.display = 'inline-block';
+
+            try {
+                const response = await fetch(`${apiUrl}/health`);
+                const data = await response.json();
+
+                if (data.status === 'healthy') {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'Connected';
+                    localStorage.setItem('apiUrl', apiUrl);
+                    if (password) localStorage.setItem('apiPassword', password);
+                } else {
+                    throw new Error('Unexpected response');
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `Failed: ${error.message}`;
+            }
+        }
+
+        async function getRecommendations() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const query = document.getElementById('queryInput').value.trim();
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (!apiUrl) {
+                alert('Please enter an API URL first');
+                return;
+            }
+
+            if (!query) {
+                alert('Please enter a query');
+                return;
+            }
+
+            resultsSection.style.display = 'block';
+            resultsContainer.innerHTML = '<div class="loading">Getting recommendations...</div>';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Loading...';
+            document.getElementById('graphSection').style.display = 'none';
+
+            try {
+                const response = await fetch(`${apiUrl}/api/recommend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentMovies = data.recommendations;
+                    displayResults(data);
+                    displayGraph(data.recommendations);
+                } else {
+                    resultsContainer.innerHTML = `
+                        <div class="loading" style="color: #f87171;">
+                            Error: ${data.error || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsContainer.innerHTML = `
+                    <div class="loading" style="color: #f87171;">
+                        Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Get Recommendations';
+            }
+        }
+
+        function parseMarkdown(text) {
+            // Replace **text** with <strong>text</strong>
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            if (!data.recommendations || data.recommendations.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="loading">
+                        No recommendations found. Try a different query.
+                    </div>
+                `;
+                return;
+            }
+
+            // Parse markdown in message
+            const parsedMessage = parseMarkdown(data.message);
+
+            let html = `<div class="message">${parsedMessage}</div>`;
+            html += '<div class="cards-container"><div class="cards">';
+
+            data.recommendations.forEach(movie => {
+                const stars = ratingStars(movie.avg);
+                const badges = movie.genres.map(g => `<span class="badge">${g}</span>`).join('');
+
+                html += `
+                    <div class="card">
+                        <h3>${movie.title}</h3>
+                        <div class="meta">${movie.year} · ${movie.decade || ''}</div>
+                        <div class="badges">${badges}</div>
+                        <div class="stars">${stars} (${movie.avg.toFixed(2)} from ${movie.num})</div>
+                    </div>
+                `;
+            });
+
+            html += '</div></div>';
+            resultsContainer.innerHTML = html;
+        }
+
+        function displayGraph(movies) {
+            if (!movies || movies.length === 0) return;
+
+            document.getElementById('graphSection').style.display = 'block';
+            d3.select('#graph').selectAll('*').remove();
+
+            const nodes = [];
+            const links = [];
+
+            // Add movie nodes
+            movies.forEach((movie, i) => {
+                nodes.push({
+                    id: `movie_${i}`,
+                    label: movie.title,
+                    type: 'movie',
+                    data: movie
+                });
+            });
+
+            // Collect genres and decades
+            const genreSet = new Set();
+            const decadeSet = new Set();
+
+            movies.forEach(movie => {
+                if (movie.genres) movie.genres.forEach(g => genreSet.add(g));
+                if (movie.decade) decadeSet.add(movie.decade);
+            });
+
+            // Add genre nodes
+            genreSet.forEach(genre => {
+                nodes.push({
+                    id: `genre_${genre}`,
+                    label: genre,
+                    type: 'genre'
+                });
+            });
+
+            // Add decade nodes
+            decadeSet.forEach(decade => {
+                nodes.push({
+                    id: `decade_${decade}`,
+                    label: decade,
+                    type: 'decade'
+                });
+            });
+
+            // Create links
+            movies.forEach((movie, i) => {
+                const movieId = `movie_${i}`;
+                if (movie.genres) {
+                    movie.genres.forEach(genre => {
+                        links.push({ source: movieId, target: `genre_${genre}` });
+                    });
+                }
+                if (movie.decade) {
+                    links.push({ source: movieId, target: `decade_${movie.decade}` });
+                }
+            });
+
+            const width = document.getElementById('graph').clientWidth;
+            const height = 800;
+
+            const svg = d3.select('#graph')
+                .attr('width', width)
+                .attr('height', height);
+
+            const simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+                .force('charge', d3.forceManyBody().strength(-500))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(70));
+
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('stroke', '#333')
+                .attr('stroke-width', 1.5);
+
+            const node = svg.append('g')
+                .selectAll('g')
+                .data(nodes)
+                .enter().append('g')
+                .call(d3.drag()
+                    .on('start', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0.3).restart();
+                        d.fx = d.x;
+                        d.fy = d.y;
+                    })
+                    .on('drag', (event, d) => {
+                        d.fx = event.x;
+                        d.fy = event.y;
+                    })
+                    .on('end', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0);
+                        d.fx = null;
+                        d.fy = null;
+                    }));
+
+            node.append('circle')
+                .attr('r', d => d.type === 'movie' ? 40 : 28)
+                .attr('fill', d => {
+                    if (d.type === 'movie') return '#fff';
+                    if (d.type === 'genre') return '#888';
+                    return '#555';
+                })
+                .attr('stroke', '#000')
+                .attr('stroke-width', 2);
+
+            node.append('text')
+                .text(d => {
+                    if (d.type === 'movie' && d.label.length > 20) {
+                        return d.label.substring(0, 18) + '...';
+                    }
+                    return d.label;
+                })
+                .attr('text-anchor', 'middle')
+                .attr('dy', d => d.type === 'movie' ? 50 : 38)
+                .attr('fill', '#fff')
+                .attr('font-size', d => d.type === 'movie' ? '12px' : '11px')
+                .attr('font-weight', d => d.type === 'movie' ? '600' : 'normal');
+
+            node.append('title')
+                .text(d => {
+                    if (d.type === 'movie') {
+                        return `${d.label}\n${d.data.year}\nRating: ${d.data.avg.toFixed(2)}`;
+                    }
+                    return d.label;
+                });
+
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+        }
+
+        function ratingStars(avg) {
+            const full = Math.floor(avg);
+            const half = (avg - full) >= 0.5 ? 1 : 0;
+            const empty = 5 - full - half;
+            return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+        }
+
+        window.onload = function() {
+            const savedUrl = localStorage.getItem('apiUrl');
+            const savedPassword = localStorage.getItem('apiPassword');
+            if (savedUrl) document.getElementById('apiUrl').value = savedUrl;
+            if (savedPassword) document.getElementById('apiPassword').value = savedPassword;
+        };
+
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                getRecommendations();
+            }
+        });
+    </script>
+</body>
+</html>
